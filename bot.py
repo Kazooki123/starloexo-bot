@@ -58,12 +58,12 @@ async def on_ready():
     print("The bot is ready and the pg_pool attribute is created.") # Add this line to check if the on_ready event is triggered
 
 # Load the ranks.py module as an extension
-async def load_extensions():
+# async def load_extensions():
     # Load the ranks extension
-    await bot.load_extension("ranks")
+    # await bot.load_extension("ranks")
     # Load any other extensions you want
 
-asyncio.run(load_extensions())
+# asyncio.run(load_extensions())
 
 # Listen to the on_message event
 @bot.event

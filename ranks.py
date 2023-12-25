@@ -1,10 +1,10 @@
 # In ranks.py
 # This module contains the function and command to update and show the user's rank based on their level and experience.
 
-import discord
-from discord.ext import commands
-import random
 import asyncpg.sql as sql
+import discord
+from discord.ext.commands import commands, cog_check
+import random
 
 # Define the table name
 TABLE_NAME = "user_data"
@@ -68,9 +68,14 @@ async def update_user_data(user, message, bot): # Remove the db parameter
         await db.execute(query, level, user.id)
         await message.channel.send(f"Congrats {user.mention}! You reached level {level} 🥳")
 
+async def pg_pool_check(ctx):
+    """Check if the pg_pool attribute is created before running the command."""
+    # Return True if the pg_pool attribute exists, False otherwise
+    return hasattr(ctx.bot, "pg_pool")
+
 # Define the rank command
 @commands.command()
-@commands.cog_check(pg_pool_check)
+@cog_check(pg_pool_check)
 async def rank(ctx, user: discord.Member = None):
     """Show the user's rank based on their level and experience.
 
