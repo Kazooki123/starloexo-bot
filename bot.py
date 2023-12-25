@@ -86,13 +86,23 @@ async def imgsearch(ctx, *, query):
 # Wikipedia Search command
 @bot.command(name='wiki')
 async def wiki(ctx, *, query):
-    wiki_wiki = wikipediaapi.Wikipedia('en')
-    page_py = wiki_wiki.page(query)
-    if page_py.exists():
-        summary = page_py.summary[:2000]
-        await ctx.send(f'**{page_py.title}**: {summary}...')
-    else:
-        await ctx.send('Page not found.')
+    try:
+        headers = {'User-Agent': 'StarloExo Bot/1.0 (Discord Bot)'}
+        wiki_wiki = wikipediaapi.Wikipedia('en', headers=headers)
+        page_py = wiki_wiki.page(query)
+
+        if page_py.exists():
+            summary = page_py.summary
+            # Split the summary into chunks of 2000 characters
+            chunks = [summary[i:i+2000] for i in range(0, len(summary), 2000)]
+
+            for chunk in chunks:
+                await ctx.send(f'**{page_py.title}**: {chunk}')
+        else:
+            await ctx.send('Page not found.')
+    except Exception as e:
+        print(f"Error in !wiki command: {e}")
+        await ctx.send("An error occurred while processing the command.")
 
 # Other commands can be added here
 
