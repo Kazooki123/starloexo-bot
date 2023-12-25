@@ -10,8 +10,12 @@ import logging
 from google_images_search import GoogleImagesSearch
 import wikipediaapi
 import asyncio
+# from ranks import COOLDOWN_SECONDS, process_leveling, process_ranks, get_user_rank, command_rank, get_user_data
 
 load_dotenv()
+
+# Create a cache to store processed message IDs
+# processed_messages = set()
 
 logging.basicConfig(level=logging.DEBUG)
 
