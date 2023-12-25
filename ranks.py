@@ -4,7 +4,7 @@
 import discord
 from discord.ext import commands
 import random
-import asyncpg.sql as sql # Import the asyncpg.sql module
+import asyncpg.sql as sql
 
 # Define the table name
 TABLE_NAME = "user_data"
