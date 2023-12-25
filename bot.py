@@ -4,9 +4,12 @@ from dotenv import load_dotenv
 import os
 import requests
 import io
+import random
+import asyncpg
 import logging
 from google_images_search import GoogleImagesSearch
 import wikipediaapi
+import asyncio
 
 load_dotenv()
 
@@ -22,9 +25,30 @@ intents.typing = True   # Enabled typing-related events for simplicity (optional
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+DATABASE_URL = os.getenv('POSTGRES_URL')
+
+# Connect to PostgreSQL
+async def create_pool():
+    return await asyncpg.create_pool(DATABASE_URL)
+
+# Load existing data when the bot starts
+async def create_table():
+    async with bot.pg_pool.acquire() as conn:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_data (
+                user_id bigint PRIMARY KEY,
+                job text,
+                wallet integer
+            )
+            """
+        )
+
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user.name}')
+    bot.pg_pool = await create_pool()  # Move the pool creation inside the on_ready event
+    await create_table()
 
 # Command to fetch jokes
 @bot.command(name='jokes')
@@ -65,20 +89,19 @@ async def imgsearch(ctx, *, query):
     gis = GoogleImagesSearch(google_api_key, google_cx)
     _search_params = {
         'q': query,
-        'num': 1,
+        'num': 4,  # Fetch four images
         'safe': 'high',
         'fileType': 'png|jpg',
     }
 
     gis.search(search_params=_search_params)
-    result = gis.results()[0]
 
     try:
-        # Download the image
-        image_content = requests.get(result.url).content
+        # Accumulate image URLs
+        image_urls = [result.url for result in gis.results()]
 
-        # Send the image as a file
-        await ctx.send(f"{ctx.author.mention}, here's the image you requested:", file=discord.File(io.BytesIO(image_content), 'image.png'))
+        # Send all images in a single message
+        await ctx.send(f"{ctx.author.mention}, here are the images for you:", files=[discord.File(io.BytesIO(requests.get(url).content), f'image{i}.png') for i, url in enumerate(image_urls)])
     except Exception as e:
         print(f"Error in !imgsearch command: {e}")
         await ctx.send("An error occurred while processing the command.")
@@ -104,7 +127,80 @@ async def wiki(ctx, *, query):
         print(f"Error in !wiki command: {e}")
         await ctx.send("An error occurred while processing the command.")
 
-# Other commands can be added here
+# Command to apply for a job
+@bot.command(name='apply')
+async def apply(ctx):
+    jobs = ["Engineer", "Programmer", "Artist"]
+    job_message = "\n".join([f"{i+1}. {job}" for i, job in enumerate(jobs)])
+
+    await ctx.send(f"{ctx.author.mention}, choose a job by replying with the corresponding number:\n{job_message}")
+
+    def check(message):
+        return message.author == ctx.author and message.channel == ctx.channel
+
+    try:
+        reply = await bot.wait_for('message', check=check, timeout=30)
+        job_number = int(reply.content)
+
+        if 1 <= job_number <= len(jobs):
+            job = jobs[job_number - 1]
+
+            async with bot.pg_pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO user_data (user_id, job, wallet)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (user_id) DO NOTHING
+                    """,
+                    ctx.author.id, job, 0
+                )
+
+            await ctx.send(f"{ctx.author.mention}, applied as {job}.")
+        else:
+            await ctx.send(f"{ctx.author.mention}, invalid job number.")
+    except asyncio.TimeoutError:
+        await ctx.send(f"{ctx.author.mention}, timeout. Please use !apply again.")
+
+# Command to work
+@bot.command(name='work')
+async def work(ctx):
+    async with bot.pg_pool.acquire() as conn:
+        user_data = await conn.fetchrow(
+            "SELECT job, wallet FROM user_data WHERE user_id = $1",
+            ctx.author.id
+        )
+
+    if user_data:
+        job, _ = user_data
+        earnings = random.randint(1, 10)  # Simulate random earnings
+
+        async with bot.pg_pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE user_data
+                SET wallet = wallet + $1
+                WHERE user_id = $2
+                """,
+                earnings, ctx.author.id
+            )
+
+        await ctx.send(f"{ctx.author.mention}, you worked as a {job} and earned {earnings} coins.")
+    else:
+        await ctx.send(f"{ctx.author.mention}, you need to !apply for a job first.")
+
+# Command to check wallet
+@bot.command(name='wallet')
+async def wallet(ctx):
+    async with bot.pg_pool.acquire() as conn:
+        wallet_amount = await conn.fetchval(
+            "SELECT wallet FROM user_data WHERE user_id = $1",
+            ctx.author.id
+        )
+
+    if wallet_amount is not None:
+        await ctx.send(f"{ctx.author.mention}, your wallet balance is {wallet_amount} coins.")
+    else:
+        await ctx.send(f"{ctx.author.mention}, you need to !apply for a job first.")
 
 # Start the bot
 bot.run(TOKEN)
