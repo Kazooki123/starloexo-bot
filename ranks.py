@@ -1,67 +1,110 @@
-import asyncio
+# In ranks.py
+# This module contains the function and command to update and show the user's rank based on their level and experience.
+
+import discord
 from discord.ext import commands
+import random
+import asyncpg.sql as sql # Import the asyncpg.sql module
 
-# Define the cooldown parameters (you can adjust these values)
-COOLDOWN_RATE = 15  # Number of messages needed for a level-up
-COOLDOWN_SECONDS = 60  # Cooldown time in seconds
+# Define the table name
+TABLE_NAME = "user_data"
 
-async def get_user_data(user_id):
-    # Replace this with your actual implementation to get or initialize user data
-    # For example, interacting with a database or cache
-    user_data = {'messages_count': 0, 'level': 0, 'rank': 0}  # Replace with actual data retrieval logic
-    return user_data
+# Define the formula to calculate the level from the experience
+def level_formula(experience):
+    return int(experience ** 0.25)
 
-# Use the commands.cooldown decorator to apply the cooldown
-@commands.cooldown(1, COOLDOWN_SECONDS, commands.BucketType.user)
-async def process_leveling(message, user_data):
-    user_id = message.author.id
+# Define a function to update the user data
+async def update_user_data(user, message, bot): # Remove the db parameter
+    """Update the user's level and experience based on their messages.
 
-    if user_id not in user_data:
-        user_data[user_id] = {'messages_count': 0, 'level': 0, 'rank': 0}
+    Args:
+        user (discord.Member): The user who sent the message.
+        message (discord.Message): The message that the user sent.
+        bot (commands.Bot): The bot object.
+    """
+    db = bot.pg_pool # Get the pool of connections from the bot object
+    # Check if the user is already in the data
+    query = sql.SQL("SELECT * FROM {table} WHERE user_id = $1;").format(
+        table=sql.Identifier(TABLE_NAME)
+    ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+    row = await db.fetchrow(query, user.id)
+    if row is None:
+        # If not, create a new entry with default values
+        query = sql.SQL("INSERT INTO {table} (user_id, level, experience) VALUES ($1, $2, $3);").format(
+            table=sql.Identifier(TABLE_NAME)
+        ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+        await db.execute(query, user.id, 0, 0)
+    # Increment the user's experience by a random amount between 5 and 10
+    query = sql.SQL("UPDATE {table} SET experience = experience + $1 WHERE user_id = $2;").format(
+        table=sql.Identifier(TABLE_NAME)
+    ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+    await db.execute(query, random.randint(5, 10), user.id)
+    # Calculate the user's level based on their experience
+    # You can use any formula you want, but here's a simple one
+    query = sql.SQL("SELECT experience FROM {table} WHERE user_id = $1;").format(
+        table=sql.Identifier(TABLE_NAME)
+    ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+    row = await db.fetchrow(query, user.id)
+    experience = row["experience"]
+    # Check if the experience is None before performing the exponentiation operation
+    if experience is None:
+        # Assign a default value of 0
+        experience = 0
+    level = level_formula(experience) # Use the level_formula function instead of the hard-coded formula
+    # Check if the user has leveled up
+    query = sql.SQL("SELECT level FROM {table} WHERE user_id = $1;").format(
+        table=sql.Identifier(TABLE_NAME)
+    ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+    row = await db.fetchrow(query, user.id)
+    old_level = row["level"]
+    if old_level is None:
+        # Assign a default value of 0
+        old_level = 0
+    if level > old_level:
+        # If yes, update their level and send a message
+        query = sql.SQL("UPDATE {table} SET level = $1 WHERE user_id = $2;").format(
+            table=sql.Identifier(TABLE_NAME)
+        ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+        await db.execute(query, level, user.id)
+        await message.channel.send(f"Congrats {user.mention}! You reached level {level} 🥳")
 
-    # Increment the messages count for the user
-    user_data[user_id]['messages_count'] += 1
+# Define the rank command
+@commands.command()
+@commands.cog_check(pg_pool_check)
+async def rank(ctx, user: discord.Member = None):
+    """Show the user's rank based on their level and experience.
 
-    # Check if the user has sent enough messages to level up
-    if user_data[user_id]['messages_count'] >= COOLDOWN_RATE:
-        user_data[user_id]['messages_count'] = 0
-        user_data[user_id]['level'] += 1
+    Args:
+        ctx (commands.Context): The context of the command invocation.
+        user (discord.Member, optional): The user whose rank to show. Defaults to the author of the message.
+    """
+    db = ctx.bot.pg_pool # Get the pool of connections from the context object
+    # If no user is specified, use the author of the message
+    if user is None:
+        user = ctx.author
+    # Check if the user is in the data
+    query = sql.SQL("SELECT * FROM {table} WHERE user_id = $1;").format(
+        table=sql.Identifier(TABLE_NAME)
+    ) # Use the sql.SQL and sql.Identifier classes for parameterized queries
+    row = await db.fetchrow(query, user.id)
+    if row is not None:
+        # If yes, get their level and experience
+        level = row["level"]
+        experience = row["experience"]
+        # Format the output
+        output = f"{user.mention} is at level {level} with {experience} XP."
+    else:
+        # If not, send a message that they have no rank yet
+        output = f"{user.mention} has no rank yet."
+    # Send the output
+    await ctx.send(output)
 
-        # Cap the level at 50
-        if user_data[user_id]['level'] > 50:
-            user_data[user_id]['level'] = 50
+# Define the pg_pool_check function to check if the pg_pool attribute is created before running the command
+async def pg_pool_check(ctx):
+    """Check if the pg_pool attribute is created before running the command."""
+    # Return True if the pg_pool attribute exists, False otherwise
+    return hasattr(ctx.bot, "pg_pool")
 
-        # Inform the user about their new level and rank
-        await message.channel.send(f"{message.author.mention}, you leveled up to Level {user_data[user_id]['level']}!")
-
-@commands.cooldown(1, COOLDOWN_SECONDS, commands.BucketType.user)
-async def process_ranks(message, user_data):
-    user_id = message.author.id
-
-    # Calculate the rank based on the level
-    user_data[user_id]['rank'] = user_data[user_id]['level'] // 15
-
-    # Cap the rank at 50
-    if user_data[user_id]['rank'] > 50:
-        user_data[user_id]['rank'] = 50
-
-    # Inform the user about their rank
-    await message.channel.send(f"{message.author.mention}, you are now Rank {user_data[user_id]['rank']}!")
-
-async def get_user_rank(user_id, user_data):
-    # Calculate the user's rank based on the level
-    rank = user_data.get(user_id, {}).get('level', 0) // 15
-
-    # Cap the rank at 50
-    return min(rank, 50)
-
-async def command_rank(ctx, user_data):
-    user_id = ctx.message.author.id if not ctx.message.mentions else ctx.message.mentions[0].id
-
-    # Get the user's rank
-    rank = await get_user_rank(user_id, user_data)
-
-    # Send the rank information to the channel
-    await ctx.send(f"{ctx.message.author.mention if not ctx.message.mentions else ctx.message.mentions[0].mention} is currently level {user_data.get(user_id, {}).get('level', 0)} and rank {rank}!")
-
-# Example usage: !rank @user
+# Define the setup function to add the command to the bot
+def setup(bot):
+    bot.add_command(rank)

@@ -1,3 +1,4 @@
+# In bot.py
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -10,7 +11,6 @@ import logging
 from google_images_search import GoogleImagesSearch
 import wikipediaapi
 import asyncio
-# from ranks import COOLDOWN_SECONDS, process_leveling, process_ranks, get_user_rank, command_rank, get_user_data
 
 load_dotenv()
 
@@ -43,7 +43,9 @@ async def create_table():
             CREATE TABLE IF NOT EXISTS user_data (
                 user_id bigint PRIMARY KEY,
                 job text,
-                wallet integer
+                wallet integer,
+                experience integer,
+                level integer
             )
             """
         )
@@ -53,6 +55,26 @@ async def on_ready():
     print(f'We have logged in as {bot.user.name}')
     bot.pg_pool = await create_pool()  # Move the pool creation inside the on_ready event
     await create_table()
+    print("The bot is ready and the pg_pool attribute is created.") # Add this line to check if the on_ready event is triggered
+
+# Load the ranks.py module as an extension
+async def load_extensions():
+    # Load the ranks extension
+    await bot.load_extension("ranks")
+    # Load any other extensions you want
+
+asyncio.run(load_extensions())
+
+# Listen to the on_message event
+@bot.event
+async def on_message(message):
+    # Ignore messages from bots
+    if message.author.bot:
+        return
+    # Update the user data
+    await ranks.update_user_data(message.author, message, bot) # Use the update_user_data function from ranks module
+    # Process any commands
+    await bot.process_commands(message)
 
 # Command to fetch jokes
 @bot.command(name='jokes')
