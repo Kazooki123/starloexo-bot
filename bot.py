@@ -3,6 +3,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import os
 import requests
+import io
 import logging
 from google_images_search import GoogleImagesSearch
 import wikipediaapi
@@ -13,10 +14,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
+intents.message_content = True
 intents.messages = True  # Enable message related events
 intents.guilds = True    # Enable server-related events
-intents.typing = False   # Disable typing-related events for simplicity (optional)
+intents.typing = True   # Enabled typing-related events for simplicity (optional)
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -24,15 +26,22 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'We have logged in as {bot.user.name}')
 
-# Jokes command
-@bot.command(name='memes')
-async def memes(ctx):
+# Command to fetch jokes
+@bot.command(name='jokes')
+async def jokes(ctx):
     try:
-        response = requests.get('https://meme-api.herokuapp.com/gimme')
+        # Fetch a random joke from JokeAPI
+        response = requests.get('https://v2.jokeapi.dev/joke/Any')
+        response.raise_for_status()  # Raise an HTTPError for bad responses
         data = response.json()
-        await ctx.send(data['url'])
+
+        # Check if it's a two-part joke or a single-part joke
+        if 'delivery' in data:
+            await ctx.send(f"{ctx.author.mention}, here's a joke for you:\n{data['setup']}\n{data['delivery']}")
+        else:
+            await ctx.send(f"{ctx.author.mention}, here's a joke for you:\n{data['joke']}")
     except Exception as e:
-        print(f"Error in !memes command: {e}")
+        print(f"Error in !jokes command: {e}")
         await ctx.send("An error occurred while processing the command.")
 
 # Quotes command
@@ -43,7 +52,7 @@ async def quotes(ctx):
     quote = f"{data['content']} - {data['author']}"
     await ctx.send(quote)
 
-# Image Search command
+# Command to perform image search
 @bot.command(name='imgsearch')
 async def imgsearch(ctx, *, query):
     google_api_key = os.getenv('GOOGLE_API_KEY')
@@ -63,7 +72,16 @@ async def imgsearch(ctx, *, query):
 
     gis.search(search_params=_search_params)
     result = gis.results()[0]
-    await ctx.send(result.url)
+
+    try:
+        # Download the image
+        image_content = requests.get(result.url).content
+
+        # Send the image as a file
+        await ctx.send(f"{ctx.author.mention}, here's the image you requested:", file=discord.File(io.BytesIO(image_content), 'image.png'))
+    except Exception as e:
+        print(f"Error in !imgsearch command: {e}")
+        await ctx.send("An error occurred while processing the command.")
 
 # Wikipedia Search command
 @bot.command(name='wiki')
