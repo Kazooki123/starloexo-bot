@@ -85,7 +85,7 @@ async def on_ready():
 async def jokes(ctx):
     try:
         # Fetch a random joke from JokeAPI
-        response = requests.get('https://v2.jokeapi.dev/joke/Any')
+        response = requests.get('https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun,Spooky,Christmas?blacklistFlags=nsfw,religious,political,racist,sexist')
         response.raise_for_status()  # Raise an HTTPError for bad responses
         data = response.json()
 
@@ -197,8 +197,8 @@ async def hangman(ctx):
 
 @bot.command(name='emoji-quiz')
 async def emoji_quiz(ctx):
-    emojis = ["🍎", "🐘", "🎉", "🌍", "🚀"]  # Replace with your list of emojis
-    correct_answer = "discord"  # Replace with your answer
+    emojis = ["⛏️", "⚒️"]  # Replace with your list of emojis
+    correct_answer = "Minecraft"  # Replace with your answer
 
     await ctx.send(f"Guess the word represented by these emojis: {' '.join(emojis)}")
     guess = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
