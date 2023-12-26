@@ -1,6 +1,6 @@
 # StarloExo Discord Bot
 
-A multi-purpose discord bot for the server of Kazooki123/Marcoo discord. 
+A multi-purpose discord bot for the server of Kazooki123/Marcoo discord server. 
 
 Features:
 * Image search `!imgsearch {prompt}`
