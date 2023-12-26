@@ -5,12 +5,15 @@ from dotenv import load_dotenv
 import os
 import requests
 import io
+from io import BytesIO
 import random
 import asyncpg
 import logging
 from google_images_search import GoogleImagesSearch
 import wikipediaapi
 import asyncio
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 load_dotenv()
 
@@ -20,6 +23,7 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 TOKEN = os.getenv('DISCORD_TOKEN')
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
 intents = discord.Intents.all()
 intents.message_content = True
@@ -66,15 +70,15 @@ async def on_ready():
 # asyncio.run(load_extensions())
 
 # Listen to the on_message event
-@bot.event
-async def on_message(message):
+# @bot.event
+# async def on_message(message):
     # Ignore messages from bots
-    if message.author.bot:
-        return
+    # if message.author.bot:
+        # return
     # Update the user data
-    await ranks.update_user_data(message.author, message, bot) # Use the update_user_data function from ranks module
+    # await ranks.update_user_data(message.author, message, bot) # Use the update_user_data function from ranks module
     # Process any commands
-    await bot.process_commands(message)
+    # await bot.process_commands(message)
 
 # Command to fetch jokes
 @bot.command(name='jokes')
@@ -93,6 +97,40 @@ async def jokes(ctx):
     except Exception as e:
         print(f"Error in !jokes command: {e}")
         await ctx.send("An error occurred while processing the command.")
+
+# Command to convert YouTube link to video file using YouTube API
+@bot.command(name='convert')
+async def convert(ctx, video_url):
+    try:
+        # Extract video ID from the URL
+        if 'youtu.be' in video_url:
+            video_id = video_url.split('/')[-1]
+        else:
+            video_id = video_url.split('v=')[1].split('&')[0]
+
+        # Check if the video_id is not empty
+        if not video_id:
+            raise IndexError("Video ID not found in the URL")
+
+        # Build the YouTube API service
+        youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+
+        # Get video details using the YouTube API
+        video_details = youtube.videos().list(part='snippet', id=video_id).execute()
+        video_title = video_details['items'][0]['snippet']['title']
+
+        # Send the video title as a message
+        await ctx.send(f'Converting video: {video_title}')
+
+        # Send the YouTube link as an attachment to the Discord channel
+        await ctx.send(f'{ctx.author.mention}, here is the video:', file=discord.File(BytesIO(video_url.encode()), filename=f'{video_title}.mp4'))
+
+    except HttpError as e:
+        print(f'YouTube API Error: {e}')
+        await ctx.send('Error converting the YouTube video. Please check the URL and try again.')
+    except IndexError as e:
+        print(f'Error extracting video ID from URL: {e}')
+        await ctx.send('Error extracting the video ID from the URL. Please check the URL format.')
 
 # Quotes command
 @bot.command(name='quotes')
