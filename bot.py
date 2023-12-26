@@ -170,6 +170,46 @@ async def imgsearch(ctx, *, query):
         print(f"Error in !imgsearch command: {e}")
         await ctx.send("An error occurred while processing the command.")
 
+
+@bot.command(name='hangman')
+async def hangman(ctx):
+    word_to_guess = "discord"  # Replace with your word selection logic
+    guessed_word = ['_'] * len(word_to_guess)
+    attempts_left = 6
+
+    while attempts_left > 0 and '_' in guessed_word:
+        await ctx.send(f"{' '.join(guessed_word)}\nAttempts left: {attempts_left}")
+        guess = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+        guess = guess.content.lower()
+
+        if guess in word_to_guess:
+            for i, letter in enumerate(word_to_guess):
+                if letter == guess:
+                    guessed_word[i] = guess
+        else:
+            attempts_left -= 1
+
+    if '_' not in guessed_word:
+        await ctx.send(f"Congratulations! You guessed the word: {''.join(guessed_word)}")
+    else:
+        await ctx.send(f"Sorry, you ran out of attempts. The word was: {word_to_guess}")
+
+
+@bot.command(name='emoji-quiz')
+async def emoji_quiz(ctx):
+    emojis = ["🍎", "🐘", "🎉", "🌍", "🚀"]  # Replace with your list of emojis
+    correct_answer = "discord"  # Replace with your answer
+
+    await ctx.send(f"Guess the word represented by these emojis: {' '.join(emojis)}")
+    guess = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+    guess = guess.content.lower()
+
+    if guess == correct_answer:
+        await ctx.send("Congratulations! You guessed correctly.")
+    else:
+        await ctx.send(f"Sorry, the correct answer was: {correct_answer}")
+
+
 # Wikipedia Search command
 @bot.command(name='wiki')
 async def wiki(ctx, *, query):
@@ -262,7 +302,7 @@ async def wallet(ctx):
         )
 
     if wallet_amount is not None:
-        await ctx.send(f"{ctx.author.mention}, your wallet balance is {wallet_amount} coins.")
+        await ctx.send(f"{ctx.author.mention}, your wallet balance is {wallet_amount} coins 🪙🪙.")
     else:
         await ctx.send(f"{ctx.author.mention}, you need to !apply for a job first.")
 
