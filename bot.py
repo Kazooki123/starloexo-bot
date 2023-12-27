@@ -17,6 +17,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from bardapi import BardAsync
 import configparser
+from welcome import Welcome
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -37,6 +38,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
 intents = discord.Intents.all()
+intents.members = True
 intents.message_content = True
 intents.messages = True  # Enable message related events
 intents.guilds = True    # Enable server-related events
@@ -159,13 +161,7 @@ def write_config(config):
     with open("config.ini", "w") as configfile:
         config.write(configfile)
 
-# Load the ranks.py module as an extension
-# async def load_extensions():
-    # Load the ranks extension
-    # await bot.load_extension("ranks")
-    # Load any other extensions you want
-
-# asyncio.run(load_extensions())
+bot.add_cog(Welcome(bot))
 
 # Listen to the on_message event
 # @bot.event
