@@ -1,7 +1,7 @@
 # In ranks.py
 # This module contains the function and command to update and show the user's rank based on their level and experience.
 
-import asyncpg.sql as sql
+import asyncpg as sql
 import discord
 from discord.ext.commands import commands, cog_check
 import random

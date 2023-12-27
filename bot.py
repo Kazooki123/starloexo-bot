@@ -14,6 +14,13 @@ import wikipediaapi
 import asyncio
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from bardapi import BardAsync
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+BARD_TOKEN = config["TOKENS"]['bard_token']
+bard = BardAsync(token=BARD_TOKEN)
 
 load_dotenv()
 
@@ -60,6 +67,70 @@ async def on_ready():
     bot.pg_pool = await create_pool()  # Move the pool creation inside the on_ready event
     await create_table()
     print("The bot is ready and the pg_pool attribute is created.") # Add this line to check if the on_ready event is triggered
+
+@bot.command(name="reset")
+async def reset(interaction: discord.Interaction):
+    await interaction.response.defer()
+    global bard
+    bard = BardAsync(token=BARD_TOKEN)
+    await interaction.followup.send("Chat context successfully reset.")
+    return
+    
+@bot.command(name="chat")
+async def chat(interaction: discord.Interaction, prompt: str, image: discord.Attachment = None):
+    await interaction.response.defer()
+    if image is not None:
+        if not image.content_type.startswith('image/'):
+            await interaction.response.send_message("File must be an image")
+            return
+        response = await bard.ask_about_image(prompt, await image.read())
+        if len(response['content']) > 2000:
+            embed = discord.Embed(title="Response", description=response['content'], color=0xf1c40f)
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send(response['content'])
+            return
+    response = await generate_response(prompt) 
+    if len(response['content']) > 2000:
+        embed = discord.Embed(title="Response", description=response['content'], color=0xf1c40f)
+        await interaction.followup.send(embed=embed)
+    else:
+        await interaction.followup.send(response['content'])
+    return
+
+async def generate_response(prompt):
+    response = await bard.get_answer(prompt)
+    if not "Unable to get response." in response["content"]:
+        config = read_config()
+        if config.getboolean("SETTINGS", "use_images"):
+            images = response["images"]
+            if images:
+                for image in images:
+                    response["content"] += f"\n{image}"
+        return response
+
+@bot.event
+async def on_message(message):
+    config = read_config()
+    if config.getboolean("SETTINGS", "reply_all"):
+        if message.author == bot.user:
+            return
+        async with message.channel.typing():
+            response = await generate_response(message.content)
+            if len(response['content']) > 2000:
+                embed = discord.Embed(title="Response", description=response['content'], color=0xf1c40f)
+                await message.channel.send(embed=embed)
+            else:
+                await message.channel.send(response['content'])
+    
+def read_config():
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    return config
+
+def write_config(config):
+    with open("config.ini", "w") as configfile:
+        config.write(configfile)
 
 # Load the ranks.py module as an extension
 # async def load_extensions():
