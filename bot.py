@@ -109,19 +109,42 @@ async def generate_response(prompt):
                     response["content"] += f"\n{image}"
         return response
 
-@bot.event
-async def on_message(message):
+@bot.command(name="public")
+async def public(interaction: discord.Interaction):
     config = read_config()
     if config.getboolean("SETTINGS", "reply_all"):
-        if message.author == bot.user:
-            return
-        async with message.channel.typing():
-            response = await generate_response(message.content)
-            if len(response['content']) > 2000:
-                embed = discord.Embed(title="Response", description=response['content'], color=0xf1c40f)
-                await message.channel.send(embed=embed)
-            else:
-                await message.channel.send(response['content'])
+        await interaction.response.send_message("Bot is already in public mode")
+    else:
+        config["SETTINGS"]["reply_all"] = "True"
+        await interaction.response.send_message("Bot will now respond to all messages")
+    write_config(config)
+    return
+
+@bot.command(name="private")
+async def private(interaction: discord.Interaction):
+    config = read_config()
+    if not config.getboolean("SETTINGS", "reply_all"):
+        config["SETTINGS"]["reply_all"] = "false"
+        await interaction.response.send_message("Bot will now only respond to !chat")
+    else:
+        await interaction.response.send_message("Bot is already in private mode")
+    write_config(config)
+    return
+
+
+# @bot.event
+# async def on_message(message):
+    # config = read_config()
+    # if config.getboolean("SETTINGS", "reply_all"):
+        # if message.author == bot.user:
+            # return
+        # async with message.channel.typing():
+            # response = await generate_response(message.content)
+            # if len(response['content']) > 2000:
+                # embed = discord.Embed(title="Response", description=response['content'], color=0xf1c40f)
+                # await message.channel.send(embed=embed)
+            # else:
+                # await message.channel.send(response['content'])
     
 def read_config():
     config = configparser.ConfigParser()
