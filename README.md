@@ -7,6 +7,7 @@ Features:
 * Wikipedia search `!wiki {prompt}`
 * Jokes and memes `!memes`
 * Quotes `!quotes`
+* Bard AI chatbot `!chat {prompt}` (Note: For some reason it doesn't fetch the Bard token/cookie so that's why it doesn't respond. Well be fixed sooner😶‍🌫️)
 
 ## Games:
 * Apply for work `!apply` (Well add more options sooner)
