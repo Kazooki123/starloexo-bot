@@ -374,7 +374,7 @@ async def work(ctx):
 
     if user_data:
         job, _ = user_data
-        earnings = random.randint(1, 10)  # Simulate random earnings
+        earnings = random.randint(1, 90000)  # Simulate random earnings
 
         async with bot.pg_pool.acquire() as conn:
             await conn.execute(
