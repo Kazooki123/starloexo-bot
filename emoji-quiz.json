@@ -1,0 +1,48 @@
+{
+  "questions": [
+    {
+      "emojis": ["🍎", "🐘", "🎉", "🌍", "🚀"],
+      "answer": "discord"
+    },
+    {
+      "emojis": ["🍕", "🍔", "🍟", "🥤", "🍦"],
+      "answer": "fast food"
+    },
+    {
+      "emojis": ["⛏️", "⚒️"],
+      "answer": "minecraft"
+    },
+    {
+      "emojis": ["🌍", "🪖", "✌️"],
+      "answer": "world war 2"
+    },
+    {
+      "emojis": ["🔌", "🪭"],
+      "answer": "electric fan"
+    },
+    {
+      "emojis": ["🔔", "🏋️‍♂️"],
+      "answer": "belgium"
+    },
+    {
+      "emojis": ["2️⃣", "R", "🗝️"],
+      "answer": "turkey"
+    },
+    {
+      "emojis": ["⛓️", "🅰️"],
+      "answer": "china"
+    },
+    {
+      "emojis": ["🍔", "🤡"],
+      "answer": "mcdonald"
+    },
+    {
+      "emojis": ["🥵", "🐶"],
+      "answer": "hotdog"
+    },
+    {
+      "emojis": ["👁️", "🏃‍♀️"],
+      "answer": "iran"
+    }
+  ]
+}

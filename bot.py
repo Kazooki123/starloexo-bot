@@ -7,6 +7,7 @@ import requests
 import io
 from io import BytesIO
 import random
+import json
 import asyncpg
 import logging
 from google_images_search import GoogleImagesSearch
@@ -23,6 +24,9 @@ BARD_TOKEN = config["TOKENS"]['bard_token']
 bard = BardAsync(token=BARD_TOKEN)
 
 load_dotenv()
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(script_dir, 'emoji-quiz.json')
 
 # Create a cache to store processed message IDs
 # processed_messages = set()
@@ -288,11 +292,16 @@ async def hangman(ctx):
     else:
         await ctx.send(f"Sorry, you ran out of attempts. The word was: {word_to_guess}")
 
+# Load emoji quiz questions from the JSON file
+with open(file_path, 'r', encoding='utf-8') as file:
+    emoji_quiz_data = json.load(file)
 
 @bot.command(name='emoji-quiz')
 async def emoji_quiz(ctx):
-    emojis = ["⛏️", "⚒️"]  # Replace with your list of emojis
-    correct_answer = "Minecraft"  # Replace with your answer
+    # Select a random emoji quiz question
+    quiz_question = random.choice(emoji_quiz_data['questions'])
+    emojis = quiz_question['emojis']
+    correct_answer = quiz_question['answer'].lower()
 
     await ctx.send(f"Guess the word represented by these emojis: {' '.join(emojis)}")
     guess = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
@@ -302,7 +311,6 @@ async def emoji_quiz(ctx):
         await ctx.send("Congratulations! You guessed correctly.")
     else:
         await ctx.send(f"Sorry, the correct answer was: {correct_answer}")
-
 
 # Wikipedia Search command
 @bot.command(name='wiki')
