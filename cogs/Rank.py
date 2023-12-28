@@ -33,7 +33,7 @@ Session = sessionmaker(bind=engine)
 def level_formula(experience):
     return int(experience ** 0.25)
 
-class Ranks(commands.Cog):
+class Rank(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.message_queue = Queue()
@@ -83,7 +83,7 @@ class Ranks(commands.Cog):
         while True:
             message = await self.message_queue.get()
             # Replace CHANNEL_ID with the actual channel ID
-            channel = self.bot.get_channel(1188682193900421142)
+            channel = self.bot.get_channel(1189735477222322217)
             await channel.send(message)
             # Sleep for a short duration to avoid potential rate limits
             await sleep(1)
@@ -133,4 +133,4 @@ class Ranks(commands.Cog):
         return hasattr(ctx.bot, "pg_pool")
 
 def setup(bot):
-    bot.add_cog(Ranks(bot))
+    bot.add_cog(Rank(bot))
