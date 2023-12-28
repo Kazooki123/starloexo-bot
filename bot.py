@@ -17,7 +17,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from bardapi import BardAsync
 import configparser
-from welcome import Welcome
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -73,6 +72,10 @@ async def on_ready():
     bot.pg_pool = await create_pool()  # Move the pool creation inside the on_ready event
     await create_table()
     print("The bot is ready and the pg_pool attribute is created.") # Add this line to check if the on_ready event is triggered
+
+for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            bot.load_extension(f"cogs.{filename[:-3]}")
 
 @bot.command(name="reset")
 async def reset(interaction: discord.Interaction):
@@ -160,8 +163,6 @@ def read_config():
 def write_config(config):
     with open("config.ini", "w") as configfile:
         config.write(configfile)
-
-bot.add_cog(Welcome(bot))
 
 # Listen to the on_message event
 # @bot.event
