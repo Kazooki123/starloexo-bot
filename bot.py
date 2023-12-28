@@ -73,14 +73,10 @@ async def on_ready():
     await create_table()
     print("The bot is ready and the pg_pool attribute is created.") # Add this line to check if the on_ready event is triggered
 
-# Iterate through the files in the "cogs" directory
-for filename in os.listdir("./cogs"):
-    if filename.endswith(".py"):
-        try:
-            # Load the extension by appending the path
-            bot.load_extension(f"cogs.{filename[:-3]}")
-        except Exception as e:
-            print(f"Failed to load extension {filename[:-3]}: {e}")
+async def load_extensions():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await bot.load_extension(f"cogs.{filename[:-3]}")
 
 @bot.command(name="reset")
 async def reset(interaction: discord.Interaction):
