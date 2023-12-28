@@ -1,6 +1,6 @@
 # In bot.py
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import os
 import requests
@@ -66,12 +66,32 @@ async def create_table():
             """
         )
 
+# Load emoji quiz questions from the JSON file
+with open(file_path, 'r', encoding='utf-8') as file:
+    emoji_quiz_data = json.load(file)
+
+
+@tasks.loop(minutes=30)  #30 for a 30-minute loop
+async def send_emoji_quiz():
+    # Replace with the ID of the channel where you want to send the emoji quiz
+    channel_id = 1128638101854638112
+    channel = bot.get_channel(channel_id)
+
+    # Select a random emoji quiz question
+    quiz_question = random.choice(emoji_quiz_data['questions'])
+    emojis = quiz_question['emojis']
+    correct_answer = quiz_question['answer'].lower()
+
+    await channel.send(f"Guess the word represented by these emojis: {' '.join(emojis)}")
+
+
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user.name}')
     bot.pg_pool = await create_pool()  # Move the pool creation inside the on_ready event
     await create_table()
-    print("The bot is ready and the pg_pool attribute is created.") # Add this line to check if the on_ready event is triggered
+    print("The bot is ready and the pg_pool attribute is created.")
+    send_emoji_quiz.start()
 
 async def load_extensions():
     for filename in os.listdir("./cogs"):
@@ -290,9 +310,6 @@ async def hangman(ctx):
     else:
         await ctx.send(f"Sorry, you ran out of attempts. The word was: {word_to_guess}")
 
-# Load emoji quiz questions from the JSON file
-with open(file_path, 'r', encoding='utf-8') as file:
-    emoji_quiz_data = json.load(file)
 
 @bot.command(name='emoji-quiz')
 async def emoji_quiz(ctx):
@@ -302,7 +319,16 @@ async def emoji_quiz(ctx):
     correct_answer = quiz_question['answer'].lower()
 
     await ctx.send(f"Guess the word represented by these emojis: {' '.join(emojis)}")
-    guess = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+
+    def check(message):
+        return message.author == ctx.author and message.channel == ctx.channel
+
+    try:
+        guess = await bot.wait_for('message', check=check, timeout=30.0)
+    except asyncio.TimeoutError:
+        await ctx.send("Time's up! The correct answer was: {correct_answer}")
+        return
+
     guess = guess.content.lower()
 
     if guess == correct_answer:
