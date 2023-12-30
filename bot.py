@@ -91,7 +91,6 @@ async def on_ready():
     bot.pg_pool = await create_pool()  # Move the pool creation inside the on_ready event
     await create_table()
     print("The bot is ready and the pg_pool attribute is created.")
-    send_emoji_quiz.start()
 
 async def load_extensions():
     for filename in os.listdir("./cogs"):
